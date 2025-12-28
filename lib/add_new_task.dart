@@ -1,8 +1,12 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_firebase_tutorial/utils.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 class AddNewTask extends StatefulWidget {
   const AddNewTask({super.key});
@@ -23,6 +27,24 @@ class _AddNewTaskState extends State<AddNewTask> {
     titleController.dispose();
     descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> uploadTaskToDb() async {
+    try {
+      final id = Uuid().v4();
+      await FirebaseFirestore.instance.collection("tasks").doc(id).set({
+        'uid': FirebaseAuth.instance.currentUser!.uid,
+        'title': titleController.text.trim(),
+        'description': descriptionController.text.trim(),
+        'date': selectedDate,
+        'postedAt': FieldValue.serverTimestamp(),
+        'color': rgbToHex(_selectedColor),
+        'imageUrl':
+            "image url that we get after stored it into Firebase Storage "
+      });
+    } on FirebaseAuthException catch (e) {
+      print(e.message.toString());
+    }
   }
 
   @override
@@ -122,7 +144,9 @@ class _AddNewTaskState extends State<AddNewTask> {
               ),
               const SizedBox(height: 10),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () async {
+                  await uploadTaskToDb();
+                },
                 child: const Text(
                   'SUBMIT',
                   style: TextStyle(
